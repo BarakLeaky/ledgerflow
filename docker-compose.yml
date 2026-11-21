@@ -1,0 +1,11 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ledgerflow
+      POSTGRES_USER: ledgerflow_owner
+      POSTGRES_PASSWORD: ledgerflow_owner
+    ports: ["5433:5432"]
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+volumes:
+  pgdata:
