@@ -15,18 +15,23 @@ export default async function NewInvoice({ searchParams }: { searchParams: Promi
       <h1 className="text-2xl font-semibold">New invoice ({active.base_currency})</h1>
       {error && <p role="alert" className="text-sm text-red-400">{error}</p>}
       <div className="flex gap-3">
-        <select className={input} name="customerId" required defaultValue="">
-          <option value="" disabled>Choose customer</option>
-          {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-        </select>
-        <input className={input} name="dueDate" type="date" required aria-label="Due date" />
+        <div className="flex-1">
+          <select className={input} name="customerId" required defaultValue="">
+            <option value="" disabled>Choose customer</option>
+            {customers.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+        <div className="flex-1"><input className={input} name="dueDate" type="date" required aria-label="Due date" /></div>
       </div>
       <div className="flex flex-col gap-2">
+        <div className="flex gap-2 text-xs text-neutral-400">
+          <div className="flex-1">Description</div><div className="w-20">Qty</div><div className="w-32">Unit price</div>
+        </div>
         {[0, 1, 2, 3, 4].map((i) => (
           <div key={i} className="flex gap-2">
-            <input className={`${input} flex-1`} name="desc" placeholder="Description" />
-            <input className={`${input} w-20`} name="qty" type="number" min={1} defaultValue={1} aria-label="Quantity" />
-            <input className={`${input} w-32`} name="price" inputMode="decimal" placeholder="Unit price" aria-label="Unit price" />
+            <div className="flex-1"><input className={input} name="desc" placeholder="Description" /></div>
+            <div className="w-20"><input className={input} name="qty" type="number" min={1} defaultValue={1} aria-label="Quantity" /></div>
+            <div className="w-32"><input className={input} name="price" inputMode="decimal" placeholder="0.00" aria-label="Unit price" /></div>
           </div>
         ))}
       </div>
