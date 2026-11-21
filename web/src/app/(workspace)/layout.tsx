@@ -3,6 +3,8 @@ import { logout, switchOrg } from "@/lib/actions";
 import { requireOrg } from "@/lib/auth";
 import { input } from "@/lib/ui";
 
+const NAV: [string, string][] = [["/overview", "Overview"], ["/invoices", "Invoices"], ["/customers", "Customers"], ["/onboarding", "New organisation"]];
+
 export default async function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   const { user, memberships, active } = await requireOrg();
   return (
@@ -10,12 +12,11 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
       <aside className="flex w-56 flex-col gap-6 border-r border-white/10 p-4">
         <div className="text-lg font-semibold">LedgerFlow</div>
         <nav className="flex flex-col gap-1 text-sm">
-          <Link className="rounded-lg bg-sky-500/10 px-3 py-2 text-sky-400" href="/overview">Overview</Link>
-          <Link className="rounded-lg px-3 py-2 text-neutral-400 hover:bg-white/5" href="/onboarding">New organisation</Link>
+          {NAV.map(([href, label]) => (
+            <Link key={href} className="rounded-lg px-3 py-2 text-neutral-300 hover:bg-white/5 hover:text-sky-400" href={href}>{label}</Link>
+          ))}
         </nav>
-        <form action={logout} className="mt-auto">
-          <button className="text-sm text-red-400">Sign out</button>
-        </form>
+        <form action={logout} className="mt-auto"><button className="text-sm text-red-400">Sign out</button></form>
       </aside>
       <div className="flex-1">
         <header className="flex items-center justify-between gap-4 border-b border-white/10 px-6 py-3">
