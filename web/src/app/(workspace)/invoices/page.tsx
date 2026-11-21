@@ -1,14 +1,20 @@
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { requireOrg } from "@/lib/auth";
 import { withTenant } from "@/lib/db";
 import { formatMinor } from "@/lib/money";
+import { recordPayment } from "@/lib/payment-actions";
 import { can } from "@/lib/permissions";
 import { issueInvoice } from "@/lib/sales-actions";
-import { btn, card } from "@/lib/ui";
+import { btn, card, input } from "@/lib/ui";
+
+const METHODS = [["MPESA", "M-PESA"], ["BANK_TRANSFER", "Bank transfer"], ["CASH", "Cash"], ["CARD", "Card"], ["OTHER", "Other"]];
 
 export default async function Invoices({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const { active } = await requireOrg();
   const { error } = await searchParams;
+  const today = new Date().toLocaleDateString("en-CA");
+  const canPay = can(active.role, "payment.record") && can(active.role, "payment.allocate");
   const rows = await withTenant(active.organisation_id, async (c) =>
     (await c.query(
       `select i.id, i.number, i.status, i.due_date::text as due, i.total_minor::text as total, i.paid_minor::text as paid, i.currency, c.name
@@ -30,21 +36,40 @@ export default async function Invoices({ searchParams }: { searchParams: Promise
               {["Number", "Customer", "Due", "Total", "Balance", "Status", ""].map((h) => <th key={h} className="px-4 py-3 font-normal">{h}</th>)}
             </tr></thead>
             <tbody className="divide-y divide-white/10 tabular-nums">
-              {rows.map((r) => (
-                <tr key={r.id}>
-                  <td className="px-4 py-3">{r.number ?? "Draft"}</td>
-                  <td className="px-4 py-3">{r.name}</td>
-                  <td className="px-4 py-3">{r.due}</td>
-                  <td className="px-4 py-3">{formatMinor(r.total, r.currency)}</td>
-                  <td className="px-4 py-3">{formatMinor((BigInt(r.total) - BigInt(r.paid)).toString(), r.currency)}</td>
-                  <td className="px-4 py-3">{r.status.replace("_", " ")}</td>
-                  <td className="px-4 py-3">
-                    {r.status === "DRAFT" && can(active.role, "invoice.issue") && (
-                      <form action={issueInvoice}><input type="hidden" name="id" value={r.id} /><button className="text-sky-400">Issue</button></form>
-                    )}
-                  </td>
-                </tr>
-              ))}
+              {rows.map((r) => {
+                const balance = BigInt(r.total) - BigInt(r.paid);
+                return (
+                  <tr key={r.id} className="align-top">
+                    <td className="px-4 py-3">{r.number ?? "Draft"}</td>
+                    <td className="px-4 py-3">{r.name}</td>
+                    <td className="px-4 py-3">{r.due}</td>
+                    <td className="px-4 py-3">{formatMinor(r.total, r.currency)}</td>
+                    <td className="px-4 py-3">{formatMinor(balance.toString(), r.currency)}</td>
+                    <td className="px-4 py-3">{r.status.replace("_", " ")}</td>
+                    <td className="px-4 py-3">
+                      {r.status === "DRAFT" && can(active.role, "invoice.issue") && (
+                        <form action={issueInvoice}><input type="hidden" name="id" value={r.id} /><button className="text-sky-400">Issue</button></form>
+                      )}
+                      {canPay && (r.status === "ISSUED" || r.status === "PARTIALLY_PAID") && (
+                        <details>
+                          <summary className="cursor-pointer text-sky-400">Record payment</summary>
+                          <form action={recordPayment} className="mt-2 flex w-64 flex-col gap-2">
+                            <input type="hidden" name="invoiceId" value={r.id} />
+                            <input type="hidden" name="key" value={randomUUID()} />
+                            <input className={input} name="amount" inputMode="decimal" placeholder={`Amount (max ${(Number(balance) / 100).toFixed(2)})`} required aria-label="Amount" />
+                            <select className={input} name="method" defaultValue="MPESA" aria-label="Method">
+                              {METHODS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                            </select>
+                            <input className={input} name="reference" placeholder="Reference (e.g. M-PESA code)" aria-label="Reference" />
+                            <input className={input} name="receivedOn" type="date" defaultValue={today} required aria-label="Date received" />
+                            <button className={btn}>Save payment</button>
+                          </form>
+                        </details>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
